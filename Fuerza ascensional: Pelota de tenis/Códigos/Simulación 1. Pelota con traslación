@@ -1,0 +1,78 @@
+web vpython 3.2
+from vpython import *
+
+# autora: merylyn mayorga picado
+# simulación 1
+# descripción: visualización de líneas de corriente alrededor de una esfera utilizando web vpython.
+
+# espacio para la simulación
+scene.background = color.black
+scene.width = 1000
+scene.height = 600
+scene.range = 3.0
+
+# diseño de la pelota
+r = 0.8
+tenis_color = vector(0.8, 1, 0)
+
+ball = sphere(pos=vector(0,0,0), radius=r, color=tenis_color, shininess=0.1)
+
+costura = curve(color=color.white, radius=0.025)
+for t in arange(0, 2*pi + 0.05, 0.05):
+    # balance para que no se vea torcida
+    x = r * cos(t)
+    y = r * sin(t) * cos(t) * 1.1
+    z = r * sin(t) * sin(t) * 1.1 - (r/1.4)
+
+    pos_final = vector(x, y, z)
+    pos_final.mag = r + 0.01
+    costura.append(pos_final)
+
+# líneas de corriente
+l_limit = 4.0
+velocidad = 0.06
+n_segmentos = 15
+largo_seg = 0.4
+
+def get_pos(x, y0):
+    r_sq = x**2 + y0**2
+    if r_sq < r**1.9:
+        return None
+    factor = (r**2) / (r_sq if r_sq != 0 else 1)
+    return vector(x, y0 * (1 + factor), 0)
+
+# separación
+ys = [-2.0, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5, 2.0]
+segmentos = []
+
+for y0 in ys:
+    for i in range(n_segmentos):
+        start_x = -l_limit + (i * (2 * l_limit / n_segmentos))
+        s = cylinder(
+            pos=vector(start_x, y0, 0),
+            axis=vector(largo_seg, 0, 0),
+            radius=0.015,
+            color=color.white,
+            opacity=0.6
+        )
+        s.y0 = y0
+        segmentos.append(s)
+
+# animación final
+while True:
+    rate(60)
+    for s in segmentos:
+        s.pos.x += velocidad
+
+        if s.pos.x > l_limit:
+            s.pos.x = -l_limit - largo_seg
+
+        p1 = get_pos(s.pos.x, s.y0)
+        p2 = get_pos(s.pos.x + largo_seg, s.y0)
+
+        if p1 and p2:
+            s.visible = True
+            s.pos = p1
+            s.axis = p2 - p1
+        else:
+            s.visible = False
