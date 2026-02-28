@@ -1,1 +1,113 @@
+web vpython 3.2
+from vpython import *
 
+# autora: merylyn mayorga picado
+# simulación 3
+# descripción: visualización de líneas de corriente alrededor de una esfera utilizando web vpython.
+
+# escenario de la simulación
+scene.background = color.black
+scene.width = 1000
+scene.height = 600
+scene.range = 4.5
+
+# diseño de la pelota
+r = 0.8
+tenis_color = vector(0.8, 1, 0)
+
+ball = sphere(
+    pos=vector(0,0,0),
+    radius=r,
+    color=tenis_color,
+    shininess=0.1
+)
+
+costura = curve(color=color.white, radius=0.025)
+
+for t in arange(0, 2*pi + 0.05, 0.05):
+    x = r * cos(t)
+    y = r * sin(t) * cos(t) * 1.1
+    z = r * sin(t) * sin(t) * 1.1
+    p = vector(x, y, z)
+    p.mag = r + 0.01
+    costura.append(p)
+
+# flecha de la fuerza
+f_dir = vector(0.5, 1.3, 0)
+flecha_f = arrow(
+    pos=vector(0,0,0),
+    axis=f_dir,
+    color=color.white,
+    shaftwidth=0.06,
+    headwidth=0.15
+)
+
+label(
+    pos=f_dir * 1.1,
+    text='f',
+    box=False,
+    height=25,
+    color=color.white
+)
+
+# parámetros de flujo
+vel_lineal = 0.08
+vel_rotacion = -0.07
+fuerza_magnus = 0.7
+
+def get_pos_magnus(x, y0):
+    r_sq = x**2 + y0**2
+    if r_sq < r**1.8:
+        return None
+
+    factor = (r**2) / r_sq
+    y_ball = y0 * (1 + factor)
+
+    shift_up = fuerza_magnus * exp(-(x**2)/2.5) * (1 - y0/5.0)
+    estela = fuerza_magnus * 0.5 * (atan(x) + 1.2) * (1 / (1 + abs(y0)))
+
+    return vector(x, y_ball + shift_up + estela, 0)
+
+# líneas de corriente
+ys = arange(-2.8, 2.9, 0.4)
+segmentos = []
+
+n_cilindros_x = 40
+ancho_cilindro = 0.18
+espacio = 0.12
+
+for y0 in ys:
+    for i in range(n_cilindros_x):
+        start_x = -5 + i * (ancho_cilindro + espacio)
+
+        s = cylinder(
+            pos=vector(start_x, y0, 0),
+            axis=vector(ancho_cilindro, 0, 0),
+            radius=0.012,
+            color=color.white,
+            opacity=0.6
+        )
+        s.y0 = y0
+        segmentos.append(s)
+
+# animación
+while True:
+    rate(60)
+
+    ball.rotate(angle=vel_rotacion, axis=vector(0,0,1))
+    costura.rotate(angle=vel_rotacion, axis=vector(0,0,1))
+
+    for s in segmentos:
+        s.pos.x += vel_lineal
+        if s.pos.x > 5:
+            s.pos.x = -5
+
+        p1 = get_pos_magnus(s.pos.x, s.y0)
+        p2 = get_pos_magnus(s.pos.x + ancho_cilindro, s.y0)
+
+        if p1 and p2:
+            s.visible = True
+            s.pos = p1
+            s.axis = p2 - p1
+        else:
+            s.visible = False
